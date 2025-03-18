@@ -5,6 +5,11 @@ public enum LiquidPayloadType
     Safe,
     None
 }
+
+public enum Product
+{
+    
+}
 public class OverfillException : Exception
 {
     public OverfillException() : base("Maximum payload size exceeded.")
@@ -111,5 +116,17 @@ public class GasContainer(double height, double weight, double depth, double max
     public void Notify()
     {
         Console.Error.WriteLine($"Hazard detected, Container: {SeriesNumber}");
+    }
+}
+
+public class ChilledContainer : Container
+{
+    private double _temperature;
+    private Product _product;
+    public ChilledContainer(double height, double weight, double depth, double maximumPayload, double temperature,
+        Product product) :
+        base(height, weight, depth, 'C', maximumPayload)
+    {
+        
     }
 }
