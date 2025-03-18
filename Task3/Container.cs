@@ -1,5 +1,10 @@
 ﻿namespace Task3;
-
+public enum LiquidPayloadType
+{
+    Dangerous,
+    Safe,
+    None
+}
 public class OverfillException : Exception
 {
     public OverfillException() : base("Maximum payload size exceeded.")
@@ -15,11 +20,11 @@ public class Container
     protected double Weight;
     protected double Depth;
     protected char ContainerType;
-    protected Guid ContainerId;
+    private Guid ContainerId;
     protected string SeriesNumber;
     protected readonly double MaximumPayload;
 
-    public Container(double height, double weight, double depth, char containerType, double maximumPayload)
+    protected Container(double height, double weight, double depth, char containerType, double maximumPayload)
     {
         Height = height;
         Weight = weight;
@@ -40,5 +45,58 @@ public class Container
             throw new OverfillException();
         }
         CurrentPayload += payload;
+    }
+}
+
+public class LiquidContainer(double height, double weight, double depth, double maximumPayload)
+    : Container(height, weight, depth, 'L', maximumPayload), IHazardNotifier
+{
+    private LiquidPayloadType _currentLiquidPayloadType = LiquidPayloadType.None;
+
+    public new void Unload()
+    {
+        CurrentPayload = 0;
+        _currentLiquidPayloadType = LiquidPayloadType.None;
+    }
+
+    public new void Load(double payload, LiquidPayloadType liquidPayloadType)
+    {
+        if (_currentLiquidPayloadType != liquidPayloadType && _currentLiquidPayloadType != LiquidPayloadType.None)
+        {
+            Console.WriteLine("Incompatible liquid payload type." +
+                                     $"Current LiquidPayloadType: {_currentLiquidPayloadType}.");
+            Notify();
+        }
+        else
+        {
+            _currentLiquidPayloadType = liquidPayloadType;
+            if (payload > MaximumPayload - CurrentPayload)
+            {
+                throw new OverfillException();
+            }
+            switch (_currentLiquidPayloadType)
+            {
+                case LiquidPayloadType.Dangerous:
+                    if (payload > 0.5 * MaximumPayload - CurrentPayload)
+                    {
+                        Notify();
+                    }
+                    CurrentPayload += payload;
+                    break;
+                case LiquidPayloadType.Safe:
+                    if (payload > 0.9 * MaximumPayload - CurrentPayload)
+                    {
+                        Notify();
+                    }
+                    CurrentPayload += payload;
+                    break;
+            }
+        }
+            
+        
+    }
+    public void Notify()
+    {
+        Console.Error.WriteLine($"Hazard detected, Container: {SeriesNumber}");
     }
 }
