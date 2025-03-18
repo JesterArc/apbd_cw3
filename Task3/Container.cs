@@ -21,9 +21,8 @@ public class Container
     protected double Depth;
     protected char ContainerType;
     private Guid ContainerId;
-    protected string SeriesNumber;
+    public readonly string SeriesNumber;
     protected readonly double MaximumPayload;
-
     protected Container(double height, double weight, double depth, char containerType, double maximumPayload)
     {
         Height = height;
@@ -92,7 +91,21 @@ public class LiquidContainer(double height, double weight, double depth, double 
                     break;
             }
         }
-            
+    }
+
+    public void Notify()
+    {
+        Console.Error.WriteLine($"Hazard detected, Container: {SeriesNumber}");
+    }
+    
+}
+
+public class GasContainer(double height, double weight, double depth, double maximumPayload)
+    : Container(height, weight, depth, 'G', maximumPayload), IHazardNotifier
+{
+    public new void Unload()
+    {
+        CurrentPayload = 0.05 * CurrentPayload;
         
     }
     public void Notify()
