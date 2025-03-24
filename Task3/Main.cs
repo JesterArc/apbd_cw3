@@ -15,17 +15,24 @@ Dictionary<string, double> products = new Dictionary<string, double>{
 // With further reflection, yeah this should have been a dictionary
 List<Container> containers = new List<Container>();
 List<ContainerShip> containerShips = new List<ContainerShip>();
-void CreateContainerShip(List<ContainerShip> containerShips)
+void CreateContainerShip(List<ContainerShip> containerShipList)
     {
-        Console.WriteLine("Max Speed (in knots)? ");
-        double maxSpeed = double.Parse(Console.ReadLine() ?? "0");
-        Console.WriteLine("Max Container Count? ");
-        int containerCount = int.Parse(Console.ReadLine() ?? "1");
-        Console.WriteLine("Max Carrying Capacity (in tons)? ");
-        double maxCarryingCapacity = double.Parse(Console.ReadLine() ?? "0");
-        containerShips.Add(new ContainerShip(maxSpeed, containerCount, maxCarryingCapacity));
+        try
+        {
+            Console.WriteLine("Max Speed (in knots)? ");
+            double maxSpeed = double.Parse(Console.ReadLine() ?? "0");
+            Console.WriteLine("Max Container Count? ");
+            int containerCount = int.Parse(Console.ReadLine() ?? "1");
+            Console.WriteLine("Max Carrying Capacity (in tons)? ");
+            double maxCarryingCapacity = double.Parse(Console.ReadLine() ?? "0");
+            containerShipList.Add(new ContainerShip(maxSpeed, containerCount, maxCarryingCapacity));
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine(e.Message);
+        }
     }
-    void CreateContainer(List<Container> containerList, Dictionary<string, double> products)
+    void CreateContainer(List<Container> containerList, Dictionary<string, double> p)
     {
         try
         {
@@ -62,7 +69,7 @@ void CreateContainerShip(List<ContainerShip> containerShips)
                     Console.Write("Temperature (in \u00b0C)? ");
                     double temperature = double.Parse(Console.ReadLine());
                     containerList.Add(new ChilledContainer(height, weight, depth, maximumPayload, temperature,
-                        productName, products));
+                        productName, p));
                     break;
             }
         }
@@ -81,8 +88,8 @@ void CreateContainerShip(List<ContainerShip> containerShips)
             {
                 Console.WriteLine(container.ToString());
             }
-
-            string number = Console.ReadLine();
+            string? number = Console.ReadLine();
+            if (string.IsNullOrEmpty(number)) return null;
             foreach (Container container in containerList)
             {
                 if (container.SeriesNumber.ToUpper().Equals(number.ToUpper()))
@@ -91,7 +98,7 @@ void CreateContainerShip(List<ContainerShip> containerShips)
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }
@@ -110,11 +117,8 @@ void CreateContainerShip(List<ContainerShip> containerShips)
                 Console.Write("Is the payload Dangerous (y/n) ?");
                 string answer = Console.ReadLine() ?? "";
                 if (string.IsNullOrEmpty(answer)) return;
-                if (answer.ToLower() == "y")
-                {
-                    ((LiquidContainer)container).Load(payloadWeight, LiquidPayloadType.Dangerous);
-                }
-                else ((LiquidContainer)container).Load(payloadWeight, LiquidPayloadType.Safe);
+                ((LiquidContainer)container).Load(payloadWeight,
+                    answer.ToLower() == "y" ? LiquidPayloadType.Dangerous : LiquidPayloadType.Safe);
             }
             else
             {
@@ -148,7 +152,7 @@ void CreateContainerShip(List<ContainerShip> containerShips)
         Console.WriteLine("Choose the series number of the container you want: ");
         foreach (Container container in containerList)
         {
-            Console.WriteLine($"{container.SeriesNumber}");
+            Console.WriteLine($"{container.ToString()}");
         }
         string answer = Console.ReadLine() ?? "";
         foreach (Container container in containerList)
@@ -197,7 +201,7 @@ void CreateContainerShip(List<ContainerShip> containerShips)
         }
     }
 
-    Container? RemoveContainerFromShip(List<ContainerShip> shipList, List<Container> containerList)
+    Container? RemoveContainerFromShip(List<ContainerShip> shipList)
     {
         ContainerShip? cs = ChooseContainerShip(shipList);
         if (cs == null) return null;
@@ -284,6 +288,9 @@ void CreateContainerShip(List<ContainerShip> containerShips)
         if (cs == null) return;
         shipList.Remove(cs);
     }
+/*
+    ----------------
+*/
 bool flag = false;
 int loadedContainers = 0;
 while (!flag)
@@ -336,7 +343,7 @@ while (!flag)
             RemoveContainerFromList(containers);
             break;
         case "E":
-            Container? c = RemoveContainerFromShip(containerShips, containers);
+            Container? c = RemoveContainerFromShip(containerShips);
             if (c != null) containers.Add(c);
             break;
         case "F":
@@ -357,11 +364,10 @@ while (!flag)
             break;
         case "J":
             flag = true;
-            Console.WriteLine("Program shutting down.");
-            Thread.Sleep(1000);
+            Console.WriteLine("Program shutting down...");
             break;
     }
-    Thread.Sleep(500);
+    Thread.Sleep(2000);
     Console.Clear();
 }
 
