@@ -6,43 +6,34 @@ public enum LiquidPayloadType
     None
 }
 
-public enum Product
-{
-    
-}
-public class OverfillException : Exception
-{
-    public OverfillException() : base("Maximum payload size exceeded.")
-    {
-        
-    }
-}
+public class OverfillException() : Exception("Maximum payload size exceeded.");
+
 
 public class Container
 {
-    protected double CurrentPayload;
-    protected double Height;
-    protected double Weight;
-    protected double Depth;
-    protected char ContainerType;
-    private Guid ContainerId;
-    public readonly string SeriesNumber;
-    protected readonly double MaximumPayload;
-    protected Container(double height, double weight, double depth, char containerType, double maximumPayload)
+    public double CurrentPayload { get; protected set; }
+    private static int _id;
+    public double Height { get; protected set; }
+    public double Weight { get; protected set; }
+    public double Depth { get; protected set; }
+    public string ContainerType { get; protected set; }
+    public string SeriesNumber { get; protected set; }
+    public double MaximumPayload { get; protected set; }
+    public Container(double height, double weight, double depth, string containerType, double maximumPayload)
     {
         Height = height;
         Weight = weight;
         Depth = depth;
         MaximumPayload = maximumPayload;
-        ContainerId = Guid.NewGuid();
-        SeriesNumber = $"KON-${containerType}-${ContainerId}";
+        ContainerType = containerType;
+        SeriesNumber = $"KON-{containerType}-{++_id}";
     }
-    public void Unload()
+    public virtual void Unload()
     {
         CurrentPayload = 0;
     }
 
-    public void Load(double payload)
+    public virtual void Load(double payload)
     {
         if (payload > MaximumPayload - CurrentPayload)
         {
@@ -50,35 +41,45 @@ public class Container
         }
         CurrentPayload += payload;
     }
+
+    public new virtual string ToString()
+    {
+        return $"SeriesNumber: {SeriesNumber}, Height: {Height}cm, Weight: {Weight}kg, Depth: {Depth}cm" +
+               $", CurrentPayload: {CurrentPayload}kg, MaximumPayload: {MaximumPayload}kg";
+    }
 }
 
 public class LiquidContainer(double height, double weight, double depth, double maximumPayload)
-    : Container(height, weight, depth, 'L', maximumPayload), IHazardNotifier
+    : Container(height, weight, depth, "L", maximumPayload), IHazardNotifier
 {
-    private LiquidPayloadType _currentLiquidPayloadType = LiquidPayloadType.None;
+    private LiquidPayloadType _liquidPayloadType = LiquidPayloadType.None;
 
-    public new void Unload()
+    public override void Unload()
     {
         CurrentPayload = 0;
-        _currentLiquidPayloadType = LiquidPayloadType.None;
+        _liquidPayloadType = LiquidPayloadType.None;
     }
 
-    public new void Load(double payload, LiquidPayloadType liquidPayloadType)
+    public override void Load(double payload)
     {
-        if (_currentLiquidPayloadType != liquidPayloadType && _currentLiquidPayloadType != LiquidPayloadType.None)
+        Load(payload, LiquidPayloadType.Safe);
+    }
+    public void Load(double payload, LiquidPayloadType liquidPayloadType)
+    {
+        if (_liquidPayloadType != liquidPayloadType && _liquidPayloadType != LiquidPayloadType.None)
         {
             Console.WriteLine("Incompatible liquid payload type." +
-                                     $"Current LiquidPayloadType: {_currentLiquidPayloadType}.");
+                                     $"Current LiquidPayloadType: {_liquidPayloadType}.");
             Notify();
         }
         else
         {
-            _currentLiquidPayloadType = liquidPayloadType;
+            _liquidPayloadType = liquidPayloadType;
             if (payload > MaximumPayload - CurrentPayload)
             {
                 throw new OverfillException();
             }
-            switch (_currentLiquidPayloadType)
+            switch (_liquidPayloadType)
             {
                 case LiquidPayloadType.Dangerous:
                     if (payload > 0.5 * MaximumPayload - CurrentPayload)
@@ -102,13 +103,22 @@ public class LiquidContainer(double height, double weight, double depth, double 
     {
         Console.Error.WriteLine($"Hazard detected, Container: {SeriesNumber}");
     }
-    
+    public override string ToString()
+    {
+        return base.ToString() + $", LiquidPayloadType: {_liquidPayloadType}";
+    }
 }
 
-public class GasContainer(double height, double weight, double depth, double maximumPayload)
-    : Container(height, weight, depth, 'G', maximumPayload), IHazardNotifier
+public class GasContainer
+    : Container, IHazardNotifier
 {
-    public new void Unload()
+    public double Atmosphere { get; protected set; }
+    public GasContainer(double height, double weight, double depth, double maximumPayload, double atmosphere)
+        : base(height, weight, depth, "G", maximumPayload)
+    {
+        Atmosphere = atmosphere;
+    }
+    public override void Unload()
     {
         CurrentPayload = 0.05 * CurrentPayload;
         
@@ -117,16 +127,37 @@ public class GasContainer(double height, double weight, double depth, double max
     {
         Console.Error.WriteLine($"Hazard detected, Container: {SeriesNumber}");
     }
+
+    public override string ToString()
+    {
+        return base.ToString() + $", Atmosphere: {Atmosphere}Pa";
+    }
 }
 
 public class ChilledContainer : Container
 {
-    private double _temperature;
-    private Product _product;
+    private readonly Dictionary<string, double> _productList;
+    private readonly double _temperature;
+    private readonly string _product;
     public ChilledContainer(double height, double weight, double depth, double maximumPayload, double temperature,
-        Product product) :
-        base(height, weight, depth, 'C', maximumPayload)
+        string product, Dictionary<string, double> dict) :
+        base(height, weight, depth, "C", maximumPayload)
     {
-        
+        _productList = dict;
+        if (!_productList.ContainsKey(product))
+        {
+            throw new Exception("Product does not exist.");
+        }
+        _product = product;
+        if (temperature < _productList.GetValueOrDefault(product))
+        {
+            throw new Exception("Temperature of container is too low for this product.");
+        }
+        _temperature = temperature;
+    }
+
+    public override string ToString()
+    {
+        return base.ToString() + $", Temperature: {_temperature}\u00b0C, Product: {_product}";
     }
 }
